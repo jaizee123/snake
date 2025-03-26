@@ -80,6 +80,9 @@
       // Update Q-table based on the current state
       updateQTable(head);
 
+      // Log the Q-table to the console after each update
+      console.log(Q);
+
       // Update epsilon (exploration vs exploitation)
       updateEpsilon();
     }
@@ -137,34 +140,30 @@
       // Reward for eating food
       if (state.x === food.x && state.y === food.y) return 10;
       // Penalty for hitting the wall or the snake body
-      if (state.x < 0 || state.x >= canvasSize || state.y < 0 || state.y >= canvasSize) return -10;
-      if (snake.slice(1).some(segment => segment.x === state.x && segment.y === state.y)) return -10;
-      return -1; // Slight penalty for each move
+      if (state.x < 0 || state.x >= canvasSize || state.y < 0 || state.y >= canvasSize || snake.slice(1).some(segment => segment.x === state.x && segment.y === state.y)) return -10;
+      return 0; // No reward or penalty
     }
 
-    // Start the game and the interval
-    function startGame() {
-      gameInterval = setInterval(drawGame, gameSpeed);
+    // Update epsilon (exploration vs exploitation)
+    function updateEpsilon() {
+      if (epsilon > epsilonMin) {
+        epsilon *= epsilonDecay;
+      }
     }
 
     // Reset the game
     function resetGame() {
       snake = [{ x: 160, y: 160 }];
-      food = generateFood();
-      score = 0;
       direction = "RIGHT";
-      startGame();
+      score = 0;
+      food = generateFood();
+      clearInterval(gameInterval);
+      gameInterval = setInterval(drawGame, gameSpeed);
     }
 
-    // Update epsilon based on training
-    function updateEpsilon() {
-      if (epsilon > epsilonMin) {
-        epsilon *= epsilonDecay; // Decrease epsilon over time
-      }
-    }
+    // Start the game loop
+    gameInterval = setInterval(drawGame, gameSpeed);
 
-    // Start the game
-    startGame();
   </script>
 </body>
 </html>
