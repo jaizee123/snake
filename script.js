@@ -22,7 +22,7 @@ const epsilonDecay = 0.995; // Epsilon decay rate
 // Define actions
 const actions = ["UP", "DOWN", "LEFT", "RIGHT"];
 
-// Basic snake game logic
+// Main game loop
 function drawGame() {
   ctx.clearRect(0, 0, canvasSize, canvasSize);
 
@@ -104,4 +104,51 @@ function updateQTable(state) {
 
 // Best action based on current state Q-values
 function bestAction(stateKey) {
-  return Object
+  return Object.keys(Q[stateKey]).reduce((best, action) => {
+    return Q[stateKey][action] > Q[stateKey][best] ? action : best;
+  }, "UP");
+}
+
+// Simulate next state based on current action
+function simulateNextState(state, action) {
+  const nextState = { ...state };
+  if (action === "UP") nextState.y -= gridSize;
+  if (action === "DOWN") nextState.y += gridSize;
+  if (action === "LEFT") nextState.x -= gridSize;
+  if (action === "RIGHT") nextState.x += gridSize;
+  return nextState;
+}
+
+// Get the reward based on the next state
+function getReward(state) {
+  // Reward for eating food
+  if (state.x === food.x && state.y === food.y) return 10;
+  // Penalty for hitting the wall or the snake body
+  if (state.x < 0 || state.x >= canvasSize || state.y < 0 || state.y >= canvasSize) return -10;
+  if (snake.slice(1).some(segment => segment.x === state.x && segment.y === state.y)) return -10;
+  return -1; // Slight penalty for each move
+}
+
+// Start the game and the interval
+function startGame() {
+  gameInterval = setInterval(drawGame, gameSpeed);
+}
+
+// Reset the game
+function resetGame() {
+  snake = [{ x: 160, y: 160 }];
+  food = generateFood();
+  score = 0;
+  direction = "RIGHT";
+  startGame();
+}
+
+// Update epsilon based on training
+function updateEpsilon() {
+  if (epsilon > epsilonMin) {
+    epsilon *= epsilonDecay; // Decrease epsilon over time
+  }
+}
+
+// Start the game
+startGame();
