@@ -19,6 +19,9 @@ let epsilon = 1.0; // exploration rate
 const epsilonMin = 0.1; // Minimum epsilon
 const epsilonDecay = 0.995; // Epsilon decay rate
 
+// Define actions
+const actions = ["UP", "DOWN", "LEFT", "RIGHT"];
+
 // Basic snake game logic
 function drawGame() {
   ctx.clearRect(0, 0, canvasSize, canvasSize);
@@ -77,17 +80,53 @@ function generateFood() {
 
 // Update the Q-table based on the current state
 function updateQTable(state) {
-  const actions = ["UP", "DOWN", "LEFT", "RIGHT"];
   const stateKey = `${state.x}-${state.y}`;
   
-  if (!Q[stateKey]) Q[stateKey] = { UP: 0, DOWN: 0, LEFT: 0, RIGHT: 0 };
+  // Initialize Q values for the state if not done already
+  if (!Q[stateKey]) {
+    Q[stateKey] = { UP: 0, DOWN: 0, LEFT: 0, RIGHT: 0 };
+  }
 
-  const maxQValue = Math.max(...Object.values(Q[stateKey]));
-  const chosenAction = epsilon > Math.random() ? actions[Math.floor(Math.random() * 4)] : Object.keys(Q[stateKey]).find(action => Q[stateKey][action] === maxQValue);
+  // Select action using epsilon-greedy policy
+  const chosenAction = epsilon > Math.random() ? actions[Math.floor(Math.random() * 4)] : bestAction(stateKey);
 
-  // Simulate next step (basic Q-learning)
-  const reward = state.x === food.x && state.y === food.y ? 10 : -1;
-  Q[stateKey][chosenAction] += alpha * (reward + gamma * maxQValue - Q[stateKey][chosenAction]);
+  // Simulate the next state
+  const nextState = simulateNextState(state, chosenAction);
+  const reward = getReward(nextState);
+
+  // Update Q-values using Q-learning formula
+  const maxNextQ = Math.max(...Object.values(Q[`${nextState.x}-${nextState.y}`] || { UP: 0, DOWN: 0, LEFT: 0, RIGHT: 0 }));
+  Q[stateKey][chosenAction] += alpha * (reward + gamma * maxNextQ - Q[stateKey][chosenAction]);
+
+  // Set direction based on the chosen action
+  direction = chosenAction;
+}
+
+// Best action based on current state Q-values
+function bestAction(stateKey) {
+  return Object.keys(Q[stateKey]).reduce((best, action) => {
+    return Q[stateKey][action] > Q[stateKey][best] ? action : best;
+  }, "UP");
+}
+
+// Simulate next state based on current action
+function simulateNextState(state, action) {
+  const nextState = { ...state };
+  if (action === "UP") nextState.y -= gridSize;
+  if (action === "DOWN") nextState.y += gridSize;
+  if (action === "LEFT") nextState.x -= gridSize;
+  if (action === "RIGHT") nextState.x += gridSize;
+  return nextState;
+}
+
+// Get the reward based on the next state
+function getReward(state) {
+  // Reward for eating food
+  if (state.x === food.x && state.y === food.y) return 10;
+  // Penalty for hitting the wall or the snake body
+  if (state.x < 0 || state.x >= canvasSize || state.y < 0 || state.y >= canvasSize) return -10;
+  if (snake.slice(1).some(segment => segment.x === state.x && segment.y === state.y)) return -10;
+  return -1; // Slight penalty for each move
 }
 
 // Start the game and the interval
@@ -103,14 +142,6 @@ function resetGame() {
   direction = "RIGHT";
   startGame();
 }
-
-// User input to control the snake (for testing interaction)
-document.addEventListener("keydown", event => {
-  if (event.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
-  if (event.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
-  if (event.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
-  if (event.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
-});
 
 // Update epsilon based on training
 function updateEpsilon() {
